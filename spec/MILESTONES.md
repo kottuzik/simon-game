@@ -3,7 +3,7 @@
 **מסמכי מקור:** `PRD.md`, `ARCHITECTURE.md`, `DESIGN.md`  
 **היקף:** אפליקציית Web בעברית (RTL), Mobile First, עם שני מסכים, Frontend בלבד, PWA ו־Offline. אין Backend, Database, Authentication או AI.
 
-## Milestone 1 — בסיס הפרויקט ומסכי האפליקציה
+## Milestone 1 — בסיס הפרויקט ומסכי האפליקציה ✅
 
 **מטרה:** להעמיד אפליקציה ניתנת להרצה ולבדיקה במובייל, עם מבנה המסכים והעיצוב שנקבעו.
 

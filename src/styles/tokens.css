@@ -1,0 +1,54 @@
+:root {
+  /* Game colors (Style Guide) */
+  --pad-red: #ff3b30;
+  --pad-red-light: #ff6a61;
+  --pad-red-dark: #d12a20;
+  --pad-green: #34c759;
+  --pad-green-light: #5fd97f;
+  --pad-green-dark: #239c41;
+  --pad-blue: #007aff;
+  --pad-blue-light: #3d9bff;
+  --pad-blue-dark: #005ccc;
+  --pad-yellow: #ffcc00;
+  --pad-yellow-light: #ffdd4d;
+  --pad-yellow-dark: #e0a800;
+
+  /* Neutrals */
+  --color-dark: #111111;
+  --color-surface: #1f1f1f;
+  --color-border-strong: #3a3a3a;
+  --color-border: #e5e5e5;
+  --color-text: #111111;
+  --color-text-secondary: #9ca3af;
+  --color-text-muted: #4b5563;
+  --color-bg: #f8f8f8;
+  --color-card: #ffffff;
+  --color-step-neutral: #6b7280;
+
+  /* Typography */
+  --font-family: 'Heebo', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --fs-h1: 32px;
+  --fs-h2: 24px;
+  --fs-h3: 18px;
+  --fs-body: 16px;
+  --fs-caption: 14px;
+
+  /* Spacing (8px grid) */
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-6: 48px;
+
+  /* Shapes */
+  --radius-lg: 16px;
+  --radius-md: 12px;
+
+  /* Shadows */
+  --shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.25);
+  --shadow-subtle: 0 2px 6px rgba(0, 0, 0, 0.15);
+
+  /* Layout */
+  --content-max: 480px;
+  --touch-min: 48px;
+}
