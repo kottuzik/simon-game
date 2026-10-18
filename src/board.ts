@@ -69,6 +69,8 @@ function createBase(): SVGSVGElement {
 export interface Board {
   element: HTMLElement;
   pads: Record<Color, HTMLButtonElement>;
+  setLit(color: Color | null): void;
+  setEnabled(enabled: boolean): void;
 }
 
 export function createBoard(): Board {
@@ -86,7 +88,7 @@ export function createBoard(): Board {
     button.className = `pad pad--${color}`;
     button.setAttribute('aria-label', label);
     button.dataset.color = color;
-    // Pads stay inactive until a game starts (Milestone 2).
+    // Pads stay inactive until it is the player's turn.
     button.disabled = true;
 
     const layer = svg();
@@ -101,5 +103,15 @@ export function createBoard(): Board {
     pads[color] = button;
   }
 
-  return { element, pads };
+  function setLit(color: Color | null): void {
+    for (const key of Object.keys(pads) as Color[]) {
+      pads[key].classList.toggle('is-lit', key === color);
+    }
+  }
+
+  function setEnabled(enabled: boolean): void {
+    for (const key of Object.keys(pads) as Color[]) pads[key].disabled = !enabled;
+  }
+
+  return { element, pads, setLit, setEnabled };
 }
