@@ -324,3 +324,34 @@
 .btn--sound svg {
   flex-shrink: 0;
 }
+
+/* ---------- Install button and help dialog ---------- */
+.btn--install svg {
+  flex-shrink: 0;
+}
+
+.dialog__steps {
+  margin: var(--space-2) 0 0;
+  padding-inline-start: var(--space-3);
+}
+
+/* ---------- Update notice ---------- */
+.update-bar {
+  position: fixed;
+  inset-inline: var(--space-2);
+  bottom: calc(var(--space-2) + env(safe-area-inset-bottom));
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-lg);
+  background: var(--color-card);
+  box-shadow: var(--shadow-elevated);
+  color: var(--color-text);
+}
+
+.update-bar[hidden] {
+  display: none;
+}

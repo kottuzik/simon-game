@@ -12,6 +12,7 @@ import {
 import { createPresenter } from '../presenter';
 import { createAudio } from '../audio';
 import { createPauseController } from '../pause';
+import { createInstaller, isIosSafari, readEnv } from '../install';
 
 export { TOTAL_LEVELS };
 
@@ -25,6 +26,9 @@ const ICON_SOUND_ON =
   '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05A4.5 4.5 0 0 0 16.5 12zM14 3.23v2.06a7 7 0 0 1 0 13.42v2.06a9 9 0 0 0 0-17.54z"/></svg>';
 const ICON_SOUND_OFF =
   '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M16.5 12A4.5 4.5 0 0 0 14 7.97v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM19 12c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.8 8.8 0 0 0 21 12a9 9 0 0 0-7-8.77v2.06A7 7 0 0 1 19 12zM4.27 3 3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a9 9 0 0 0 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4 9.91 6.09 12 8.18V4z"/></svg>';
+
+const ICON_INSTALL =
+  '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>';
 
 function button(className: string, label: string, onClick: () => void): HTMLButtonElement {
   const el = document.createElement('button');
@@ -69,7 +73,9 @@ export function createGameView(): GameView {
   const audio = createAudio();
   const muteButton = button('btn btn--secondary btn--sound', '', toggleMute);
   const newGame = button('btn btn--secondary', 'משחק חדש', openConfirm);
-  actions.append(primary, muteButton, newGame);
+  const installButton = button('btn btn--secondary btn--install', '', onInstall);
+  installButton.hidden = true;
+  actions.append(primary, muteButton, installButton, newGame);
 
   const dialog = document.createElement('dialog');
   dialog.className = 'dialog';
@@ -87,7 +93,28 @@ export function createGameView(): GameView {
   // Esc closes the dialog natively; treat it like "cancel".
   dialog.addEventListener('close', resumeAfterConfirm);
 
-  section.append(board.element, status, actions, dialog);
+  // iPhone cannot install from a website, so this dialog explains the manual steps.
+  const installDialog = document.createElement('dialog');
+  installDialog.className = 'dialog';
+  installDialog.setAttribute('aria-labelledby', 'install-title');
+  const iosSafari = isIosSafari(readEnv());
+  installDialog.innerHTML = `
+    <h2 id="install-title" class="h2">התקנת האפליקציה באייפון</h2>
+    ${iosSafari ? '' : '<p class="body">פתחי את האתר בדפדפן Safari כדי להתקין.</p>'}
+    <ol class="body dialog__steps">
+      <li>לחצי על כפתור השיתוף בסרגל של Safari.</li>
+      <li>בחרי ״הוסף למסך הבית״.</li>
+      <li>לחצי ״הוסף״.</li>
+    </ol>
+  `;
+  const installDialogActions = document.createElement('div');
+  installDialogActions.className = 'dialog__actions';
+  const installCloseButton = button('btn btn--primary btn--small', 'סגירה', () => installDialog.close());
+  installDialogActions.append(installCloseButton);
+  installDialog.append(installDialogActions);
+  installDialog.addEventListener('close', () => pauseCtl.resume('install'));
+
+  section.append(board.element, status, actions, dialog, installDialog);
 
   let state: GameState = createIdleState();
   const presenter = createPresenter();
@@ -128,6 +155,26 @@ export function createGameView(): GameView {
     newGame.hidden = !isGameActive(state);
 
     board.setEnabled(phase === 'playerTurn' && !pauseCtl.isPaused());
+  }
+
+  const installer = createInstaller(renderInstall);
+
+  function renderInstall(): void {
+    const mode = installer.mode();
+    installButton.hidden = mode === 'none';
+    installButton.innerHTML = `${ICON_INSTALL}<span>התקן אפליקציה</span>`;
+  }
+
+  function onInstall(): void {
+    const mode = installer.mode();
+    if (mode === 'native') {
+      void installer.promptInstall();
+    } else if (mode === 'ios-help' && !installDialog.open) {
+      // Freeze the game while the help dialog is open.
+      pauseCtl.pause('install');
+      installDialog.showModal();
+      installCloseButton.focus();
+    }
   }
 
   function renderMute(): void {
@@ -237,6 +284,7 @@ export function createGameView(): GameView {
   }
 
   renderMute();
+  renderInstall();
   render();
   return {
     element: section,

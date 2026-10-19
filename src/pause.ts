@@ -1,4 +1,4 @@
-export type PauseReason = 'about' | 'hidden' | 'confirm';
+export type PauseReason = 'about' | 'hidden' | 'confirm' | 'install';
 
 export interface PauseController {
   pause(reason: PauseReason): void;

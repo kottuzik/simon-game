@@ -216,3 +216,15 @@ idle --״התחל״--> showing --> playerTurn
 - [Vitest — Getting Started](https://vitest.dev/guide/) — בדיקות תואמות Vite ו־TypeScript.
 
 **הערה:** המידע על שירותי Hosting, זכאות ומגבלות מבוסס על התיעוד הרשמי שנבדק באוקטובר 2026; תנאים ומחירים עשויים להשתנות.
+
+## החלטות מרכזיות (ADRs)
+
+### ADR-1: Base Path של GitHub Pages ואייקונים מקומיים
+**הקשר:** האתר מתפרסם ב־`https://kottuzik.github.io/simon-game/`, ואין לפרויקט אייקונים.
+**החלטה:** `base: '/simon-game/'` ב־`vite.config.ts` (גם בפיתוח, כדי שהסביבות יהיו זהות); ה־Manifest, ה־`start_url` וה־`scope` נגזרים מאותו קבוע. אייקון הלוח נוצר פעם אחת מ־`public/icon.svg` לקובצי PNG שנשמרים ב־`public/`.
+**השלכות:** כתובת הפיתוח היא `http://localhost:5173/simon-game/`. שינוי שם ה־repo מחייב לעדכן רק את הקבוע `REPO`.
+
+### ADR-2: כפתור התקנה גם ב־iPhone
+**הקשר:** iOS אינו תומך ב־`beforeinstallprompt`.
+**החלטה:** ב־iPhone/iPad (זיהוי לפי User Agent) מוצג ״התקן אפליקציה״ שפותח חלונית הסבר; החלונית משהה את המשחק (`pause` עם סיבה `install`). ב־Android הכפתור מפעיל את ה־Prompt הנתמך. בשני המקרים הכפתור מוסתר במצב standalone או אחרי `appinstalled`.
+**השלכות:** הזיהוי הוא הערכה; בדפדפן שאינו Safari החלונית מבקשת לפתוח את האתר ב־Safari.
