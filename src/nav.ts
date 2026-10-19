@@ -6,7 +6,7 @@ const LABELS: Record<ViewName, string> = {
 };
 
 // Both views stay mounted; switching only toggles `hidden`, so in-memory state survives.
-export function createNav(views: Record<ViewName, HTMLElement>): HTMLElement {
+export function createNav(views: Record<ViewName, HTMLElement>, onChange?: (active: ViewName) => void): HTMLElement {
   const header = document.createElement('header');
   header.className = 'top-bar';
 
@@ -31,6 +31,7 @@ export function createNav(views: Record<ViewName, HTMLElement>): HTMLElement {
       else button.removeAttribute('aria-current');
     }
     window.scrollTo(0, 0);
+    onChange?.(active);
   }
 
   nav.append(...buttons.map((b) => b.button));

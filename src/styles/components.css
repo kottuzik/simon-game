@@ -319,3 +319,8 @@
   border: 0;
   border-top: 1px solid var(--color-border);
 }
+
+/* ---------- Sound toggle ---------- */
+.btn--sound svg {
+  flex-shrink: 0;
+}

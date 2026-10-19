@@ -27,4 +27,4 @@ const main = document.createElement('main');
 main.className = 'content';
 main.append(views.game, views.about);
 
-app.append(createNav(views), main);
+app.append(createNav(views, (name) => gameView.setActive(name === 'game')), main);

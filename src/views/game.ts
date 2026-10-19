@@ -10,12 +10,21 @@ import {
   type GameState,
 } from '../engine';
 import { createPresenter } from '../presenter';
+import { createAudio } from '../audio';
+import { createPauseController } from '../pause';
 
 export { TOTAL_LEVELS };
 
 export interface GameView {
   element: HTMLElement;
+  // False while another screen is shown; the game pauses until it is active again.
+  setActive(active: boolean): void;
 }
+
+const ICON_SOUND_ON =
+  '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05A4.5 4.5 0 0 0 16.5 12zM14 3.23v2.06a7 7 0 0 1 0 13.42v2.06a9 9 0 0 0 0-17.54z"/></svg>';
+const ICON_SOUND_OFF =
+  '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M16.5 12A4.5 4.5 0 0 0 14 7.97v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM19 12c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.8 8.8 0 0 0 21 12a9 9 0 0 0-7-8.77v2.06A7 7 0 0 1 19 12zM4.27 3 3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a9 9 0 0 0 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4 9.91 6.09 12 8.18V4z"/></svg>';
 
 function button(className: string, label: string, onClick: () => void): HTMLButtonElement {
   const el = document.createElement('button');
@@ -57,8 +66,10 @@ export function createGameView(): GameView {
   actions.className = 'actions';
 
   const primary = button('btn btn--primary', 'התחל', onPrimary);
+  const audio = createAudio();
+  const muteButton = button('btn btn--secondary btn--sound', '', toggleMute);
   const newGame = button('btn btn--secondary', 'משחק חדש', openConfirm);
-  actions.append(primary, newGame);
+  actions.append(primary, muteButton, newGame);
 
   const dialog = document.createElement('dialog');
   dialog.className = 'dialog';
@@ -79,8 +90,11 @@ export function createGameView(): GameView {
   section.append(board.element, status, actions, dialog);
 
   let state: GameState = createIdleState();
-  let confirmOpen = false;
   const presenter = createPresenter();
+  const pressTimers = new Map<Color, ReturnType<typeof setTimeout>>();
+
+  // The game pauses when another screen is shown, the page is hidden, or the confirm dialog is open.
+  const pauseCtl = createPauseController(onPause, onResume);
 
   function render(): void {
     const { phase, level, sequence, inputIndex } = state;
@@ -113,18 +127,55 @@ export function createGameView(): GameView {
       phase === 'levelComplete' ? 'לשלב הבא' : phase === 'idle' ? 'התחל' : 'שחק שוב';
     newGame.hidden = !isGameActive(state);
 
-    board.setEnabled(phase === 'playerTurn' && !confirmOpen);
+    board.setEnabled(phase === 'playerTurn' && !pauseCtl.isPaused());
+  }
+
+  function renderMute(): void {
+    const muted = audio.isMuted();
+    muteButton.innerHTML = `${muted ? ICON_SOUND_OFF : ICON_SOUND_ON}<span>${muted ? 'הפעלת צלילים' : 'השתקת צלילים'}</span>`;
+  }
+
+  function toggleMute(): void {
+    audio.setMuted(!audio.isMuted());
+    audio.unlock();
+    renderMute();
   }
 
   function play(): void {
     render();
-    presenter.show(state.sequence, state.level, (color) => board.setLit(color), () => {
-      state = finishShowing(state);
-      render();
-    });
+    if (pauseCtl.isPaused()) return;
+    presenter.show(
+      state.sequence,
+      state.level,
+      (color) => {
+        board.setLit(color);
+        if (color) audio.play(color);
+      },
+      () => {
+        state = finishShowing(state);
+        render();
+      },
+    );
+  }
+
+  function onPause(): void {
+    // Stop all timers; an interrupted sequence replays from its first color on resume.
+    presenter.cancel();
+    for (const [color, timer] of pressTimers) {
+      clearTimeout(timer);
+      board.pads[color].classList.remove('is-pressed');
+    }
+    pressTimers.clear();
+    render();
+  }
+
+  function onResume(): void {
+    if (state.phase === 'showing') play();
+    else render();
   }
 
   function onPrimary(): void {
+    audio.unlock();
     if (state.phase === 'levelComplete') {
       state = advanceLevel(state);
     } else {
@@ -134,11 +185,9 @@ export function createGameView(): GameView {
   }
 
   function openConfirm(): void {
-    if (!isGameActive(state) || confirmOpen) return;
-    confirmOpen = true;
+    if (!isGameActive(state) || dialog.open) return;
     // Freeze the game while the dialog is open.
-    presenter.cancel();
-    render();
+    pauseCtl.pause('confirm');
     dialog.showModal();
     cancelButton.focus();
   }
@@ -149,33 +198,51 @@ export function createGameView(): GameView {
 
   // Runs on every close (cancel button, Esc, or after confirming).
   function resumeAfterConfirm(): void {
-    if (!confirmOpen) return;
-    confirmOpen = false;
-    // An interrupted sequence replays from its first color.
-    if (state.phase === 'showing') play();
-    else render();
+    pauseCtl.resume('confirm');
   }
 
   function confirmNewGame(): void {
+    audio.unlock();
     presenter.cancel();
     state = startGame();
-    confirmOpen = false;
+    render();
+    // Closing the dialog ends the pause, which starts the new sequence exactly once.
     dialog.close();
-    play();
   }
 
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) pauseCtl.pause('hidden');
+    else pauseCtl.resume('hidden');
+  });
+  if (document.hidden) pauseCtl.pause('hidden');
+
   for (const [color, pad] of Object.entries(board.pads) as [Color, HTMLButtonElement][]) {
-    let pressTimer: ReturnType<typeof setTimeout> | undefined;
     pad.addEventListener('click', () => {
+      if (state.phase !== 'playerTurn' || pauseCtl.isPaused()) return;
+      audio.unlock();
+      audio.play(color);
       // Brief visual feedback; the pad may become disabled right after this press.
       pad.classList.add('is-pressed');
-      clearTimeout(pressTimer);
-      pressTimer = setTimeout(() => pad.classList.remove('is-pressed'), 150);
+      clearTimeout(pressTimers.get(color));
+      pressTimers.set(
+        color,
+        setTimeout(() => {
+          pad.classList.remove('is-pressed');
+          pressTimers.delete(color);
+        }, 150),
+      );
       state = pressColor(state, color);
       render();
     });
   }
 
+  renderMute();
   render();
-  return { element: section };
+  return {
+    element: section,
+    setActive(active) {
+      if (active) pauseCtl.resume('about');
+      else pauseCtl.pause('about');
+    },
+  };
 }
